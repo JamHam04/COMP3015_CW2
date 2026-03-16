@@ -1,0 +1,65 @@
+# ==============================
+# Visual Studio files
+# ==============================
+.vs/
+**/.vs/
+*.VC.db
+*.VC.VC.opendb
+*.suo
+*.user
+*.opendb
+*.ipch
+
+# ==============================
+# Build results
+# ==============================
+[Bb]in/
+[Oo]bj/
+x64/
+Debug/
+debug/
+x64/Debug/
+x64/debug/
+Release/
+*.o
+
+*.exe
+*.dll
+*.ilk
+*.pdb
+*.tlog
+
+
+
+# ==============================
+# Compiled headers
+# ==============================
+*.gch
+*.pch
+
+# ==============================
+# Libraries
+# ==============================
+*.lib
+*.a
+*.la
+*.lai
+*.so
+*.dylib
+
+# ==============================
+# CMake
+# ==============================
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+
+# ==============================
+# Editor/IDE
+# ==============================
+*.idea/
+*.vscode/
+*.log
+*.tmp
+*.temp

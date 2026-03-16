@@ -14,35 +14,49 @@
 #include <GLFW/glfw3.h>
 #include "helper/skybox.h"
 
+#include "helper/particleutils.h"
+
 class SceneBasic_Uniform : public Scene
 {
 private:
-    Plane plane;
+	Plane plane;
 	std::unique_ptr<ObjMesh> barrel, roof, barrier;
 	SkyBox skybox;
-    GLuint vaoHandle;
+	GLuint vaoHandle;
 	GLuint hdrFBO, hdrTexture, quad;
-	GLuint blurFBO, tex1, tex2; 
+	GLuint blurFBO, tex1, tex2;
 	GLuint linearSampler, nearestSampler;
 	int bloomBufferWidth, bloomBufferHeight;
 
-    GLSLProgram prog;
+	GLSLProgram prog;
 	GLSLProgram skyboxProg;
-    float angle;
-    float deltaTime;
+	GLSLProgram particleProg;
+	float angle;
+	float deltaTime;
 	float tPrev;
+
+	// Particles
+	GLuint posBuffer[2], velBuffer[2], age[2];
+	GLuint particleArray[2];
+	GLuint feedback[2];
+	GLuint drawBuffer;
+	int numberOfParticles;
+	float particleLifetime;
+
 	void setMatrices();
 
-    void compile();
+	void compile();
 	void setupFBO();
+	void initBuffers();
 	void pass1(); void pass2(); void pass3(); void pass4(); void pass5();
 	float gauss(float, float);
 	void drawScene();
+	void drawParticles();
 	void computeLogAveLuminance();
-	void userInput(GLFWwindow* WindowIn);  
+	void userInput(GLFWwindow* WindowIn);
 
 
-    // Textures
+	// Textures
 	GLuint floorDiffuseTexture;
 	GLuint floorNormalTexture;
 
@@ -60,14 +74,16 @@ private:
 
 	GLuint skyboxTexture;
 
-public:
-    SceneBasic_Uniform();
+	GLuint particleTexture;
 
-    void initScene();
-    void update( float t , GLFWwindow* window);
-    void render();
-    void resize(int, int);
-    
+public:
+	SceneBasic_Uniform();
+
+	void initScene();
+	void update(float t, GLFWwindow* window);
+	void render();
+	void resize(int, int);
+
 };
 
 #endif // SCENEBASIC_UNIFORM_H

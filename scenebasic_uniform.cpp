@@ -31,7 +31,7 @@ float cameraLastX;
 float cameraLastY;
 
 SceneBasic_Uniform::SceneBasic_Uniform() : plane(50.0f, 50.0f, 1, 1), skybox(100.0f),
-	particleLifetime(5.0f), numberOfParticles(1000)
+particleLifetime(4.0f), numberOfParticles(1000), particleSize(0.5f), drawBuffer(1)
 {
 	// Load models
 	barrel = ObjMesh::load("media/model/barrel_stove_4k.obj", true);
@@ -177,19 +177,18 @@ void SceneBasic_Uniform::initScene()
 	glActiveTexture(GL_TEXTURE1);
 	ParticleUtils::createRandomTex1D(numberOfParticles * 3);
 
-	initBuffers();
+	initParticleBuffers();
 
 	particleProg.use();
 	particleProg.setUniform("RandomTexture", 1);
 	particleProg.setUniform("ParticleTexture", 4);
 
-	particleProg.setUniform("ParticleLifetime", 5.0f);
-	particleProg.setUniform("ParticleStartSize", 0.5f);
-	particleProg.setUniform("ParticleEndSize", 0.05f);
+	particleProg.setUniform("ParticleLifetime", particleLifetime);
+	particleProg.setUniform("ParticleStartSize", particleSize);
 	particleProg.setUniform("ParticleAcceleration", vec3(0.0f, 0.1f, 0.0f));
 
-	particleProg.setUniform("EmitPosition", vec3(0.0f, 2.5f, 4.0f)); // Emit from inside barrel
-	particleProg.setUniform("EmitDirection", ParticleUtils::makeArbitraryBasis(vec3(0.0f, 1.0f, 0.0f))); // Emit upwards
+	particleProg.setUniform("EmitterPosition", vec3(0.0f, 1.5f, 4.0f)); // Emit from inside barrel
+	particleProg.setUniform("EmitterDirection", ParticleUtils::makeArbitraryBasis(vec3(0.0f, 1.0f, 0.0f))); // Emit upwards
 
 	prog.use();
 }
@@ -267,6 +266,7 @@ void SceneBasic_Uniform::pass1()
 	projection = glm::perspective(glm::radians(60.0f), (float)width / height, 0.3f, 100.0f);
 
 	drawScene();
+	drawParticles(); // Draw fire particles 
 }
 
 // Bloom
@@ -346,14 +346,14 @@ void SceneBasic_Uniform::drawScene() {
 	// Set light position
 	vec4 lightPos = vec4(-20.0f, 8.0f, -25.0f, 1.0f);
 	vec4 lightPos2 = vec4(8.0f, 3.0f, 0.0f, 1.0f);
-	vec4 fireLightPos = vec4(0.0f, 2.5f, 4.0f, 1.0f); // Inside barrel
+	//vec4 fireLightPos = vec4(0.0f, 2.5f, 4.0f, 1.0f); // Inside barrel
 	prog.setUniform("Lights[0].Position", view * lightPos);
 	prog.setUniform("Lights[1].Position", view * lightPos2);
-	prog.setUniform("Lights[2].Position", view * fireLightPos);
+	//prog.setUniform("Lights[2].Position", view * fireLightPos);
 
 	// Animte fire light inside barrel
-	float fireIntensity = 1.0f + 0.75f * sin(tPrev * 5.0f); // Flicker 
-	prog.setUniform("Lights[2].L", vec3(0.0f));
+	//float fireIntensity = 1.0f + 0.75f * sin(tPrev * 5.0f); // Flicker 
+	//prog.setUniform("Lights[2].L", vec3(0.0f));
 	//prog.setUniform("Lights[2].L", vec3(fireIntensity) * 0.35f); // Update fire light intensity
 
 	// Set material properties
@@ -492,7 +492,7 @@ void SceneBasic_Uniform::drawScene() {
 	barrier->render();
 
 	// BARREL
-	prog.setUniform("Lights[2].L", vec3(fireIntensity)); // Update fire light intensity
+	//prog.setUniform("Lights[2].L", vec3(fireIntensity)); // Update fire light intensity
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, barrelDiffuseTexture);
 	glActiveTexture(GL_TEXTURE1);
@@ -506,7 +506,7 @@ void SceneBasic_Uniform::drawScene() {
 
 	setMatrices();
 	barrel->render();
-	drawParticles(); // Draw fire particles 
+	
 
 }
 
@@ -561,8 +561,10 @@ void SceneBasic_Uniform::drawParticles() {
 	// Draw particles
 	particleProg.setUniform("Pass", 2);
 
+	// Set matrices
 	particleProg.setUniform("ProjectionMatrix", projection);
 	particleProg.setUniform("ModelViewMatrix", view);
+
 
 	glActiveTexture(GL_TEXTURE4);
 	glBindTexture(GL_TEXTURE_2D, particleTexture);
@@ -742,7 +744,7 @@ float SceneBasic_Uniform::gauss(float x, float sigma2)
 }
 
 // Particle system setup
-void SceneBasic_Uniform::initBuffers()
+void SceneBasic_Uniform::initParticleBuffers()
 {
 	glGenBuffers(2, posBuffer);
 	glGenBuffers(2, velBuffer);
@@ -761,14 +763,14 @@ void SceneBasic_Uniform::initBuffers()
 	glBindBuffer(GL_ARRAY_BUFFER, age[1]);
 	glBufferData(GL_ARRAY_BUFFER, numberOfParticles * sizeof(float), 0, GL_DYNAMIC_COPY);
 
+	// Randomize particle spawn times
 	std::vector<GLfloat> tempData(numberOfParticles);
 	float rate = particleLifetime / numberOfParticles;
-
 
 	for (int i = 0; i < numberOfParticles; i++) {
 		tempData[i] = rate * (i - numberOfParticles);
 	}
-	Random::shuffle(tempData);
+	Random::shuffle(tempData); 
 
 	glBindBuffer(GL_ARRAY_BUFFER, age[0]);
 	glBufferSubData(GL_ARRAY_BUFFER, 0, numberOfParticles * sizeof(float), tempData.data());

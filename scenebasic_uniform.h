@@ -42,12 +42,13 @@ private:
 	GLuint drawBuffer;
 	int numberOfParticles;
 	float particleLifetime;
+	float particleSize;
 
 	void setMatrices();
 
 	void compile();
 	void setupFBO();
-	void initBuffers();
+	void initParticleBuffers();
 	void pass1(); void pass2(); void pass3(); void pass4(); void pass5();
 	float gauss(float, float);
 	void drawScene();

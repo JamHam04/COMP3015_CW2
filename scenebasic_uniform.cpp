@@ -606,6 +606,9 @@ void SceneBasic_Uniform::setMatrices()
 	prog.setUniform("ModelViewMatrix", mv);
 	prog.setUniform("NormalMatrix", mat3(vec3(mv[0]), vec3(mv[1]), vec3(mv[2])));
 	prog.setUniform("MVP", projection * mv);
+	mat4 lightView = glm::lookAt(vec3(-20.0f, 8.0f, -25.0f), vec3(0.0f), vec3(0.0f, 1.0f, 0.0f));
+	mat4 lightProjection = glm::ortho(-20.0f, 20.0f, -20.0f, 20.0f, 1.0f, 50.0f);
+	prog.setUniform("LightProjectionMatrix", lightProjection * lightView);
 
 }
 
@@ -670,7 +673,7 @@ void SceneBasic_Uniform::userInput(GLFWwindow* WindowIn)
 	view = glm::lookAt(cameraPos, cameraPos + cameraTarget, cameraUp);
 }
 
-// Setup framebuffer for HDR
+// Setup framebuffer
 void SceneBasic_Uniform::setupFBO()
 {
 
@@ -717,6 +720,30 @@ void SceneBasic_Uniform::setupFBO()
 	glDrawBuffers(1, drawBuffers);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	// Shadow buffer
+	GLuint shadowDepthTex;
+	glGenTextures(1, &shadowDepthTex);
+	glBindTexture(GL_TEXTURE_2D, shadowDepthTex);
+	glTexStorage2D(GL_TEXTURE_2D, 1, GL_DEPTH_COMPONENT32F, width, height);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+	GLfloat borderColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+	glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
+
+	glGenFramebuffers(1, &shadowFBO);
+	glBindFramebuffer(GL_FRAMEBUFFER, shadowFBO);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, shadowDepthTex, 0);
+	glDrawBuffer(GL_NONE);
+	glReadBuffer(GL_NONE);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+
 
 }
 

@@ -8,6 +8,7 @@ layout (location = 3) in vec4 VertexTangent;
 out vec3 Position;
 out vec3 Normal;
 out vec2 TexCoord;
+out vec4 ShadowCoord;
 
 
 // Uniforms
@@ -15,6 +16,7 @@ uniform mat4 ModelViewMatrix;
 uniform mat3 NormalMatrix;
 uniform mat4 ProjectionMatrix;
 uniform mat4 MVP;
+uniform mat4 LightProjectionMatrix;
 
 void main()
 {
@@ -25,6 +27,7 @@ void main()
 	mat3 toObjectSpace = mat3(tangent, binormal, Normal);
 
 	TexCoord = VertexTexCoord;
+	ShadowCoord = LightProjectionMatrix * vec4(VertexPosition, 1.0);
 
 	Position = (ModelViewMatrix * vec4(VertexPosition, 1.0)).xyz;
 	gl_Position = MVP * vec4(VertexPosition, 1.0);

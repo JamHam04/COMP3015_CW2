@@ -23,7 +23,7 @@ private:
 	std::unique_ptr<ObjMesh> barrel, roof, barrier;
 	SkyBox skybox;
 	GLuint vaoHandle;
-	GLuint hdrFBO, hdrTexture, quad;
+	GLuint hdrFBO, hdrTexture, quad, shadowFBO;
 	GLuint blurFBO, tex1, tex2;
 	GLuint linearSampler, nearestSampler;
 	int bloomBufferWidth, bloomBufferHeight;

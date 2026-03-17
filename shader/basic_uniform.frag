@@ -20,7 +20,9 @@ uniform float LumThresh;
 uniform float PixOffset[10] = float[](0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0);
 uniform float Weight[10];
 
-
+// Shadows
+uniform sampler2DShadow ShadowMap;
+in vec4 ShadowCoord;
 
 
 layout (location = 0) out vec4 FragColor;
@@ -127,6 +129,13 @@ vec4 Pass1() {
     for (int i = 0; i < NumLights; i++) {
         color += blinnPhong(Lights[i], Position, normalize(finalNormalTex), finalDiffuseTex);
     }
+
+    // Shadow Mapping
+    float shadow = 1.0;
+    if (ShadowCoord.z > 0.0) {
+        shadow = textureProj(ShadowMap, ShadowCoord);
+    }
+    color *= shadow;
 
     color = mix(Fog.Color, color, fogFactor);
     return vec4(color, 1.0);

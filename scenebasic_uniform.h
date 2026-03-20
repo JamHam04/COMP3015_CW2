@@ -16,6 +16,7 @@
 
 #include "helper/particleutils.h"
 #include "helper/frustum.h"
+#include "helper/noisetex.h"
 
 class SceneBasic_Uniform : public Scene
 {
@@ -83,6 +84,7 @@ private:
 	GLuint barrierNormalTexture;
 
 	GLuint skyboxTexture;
+	GLuint noiseTexture;
 
 	GLuint particleTexture;
 

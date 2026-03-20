@@ -207,6 +207,10 @@ void SceneBasic_Uniform::initScene()
 
 	prog.use();	
 
+	// Noise
+	noiseTexture = NoiseTex::generate2DTex(3.0f);
+
+
 }
 
 void SceneBasic_Uniform::compile()
@@ -420,12 +424,14 @@ void SceneBasic_Uniform::drawScene() {
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTexture);
 
+	skyboxProg.setUniform("NoiseTexture", 1);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, noiseTexture);
+
 	skybox.render();
 
 	prog.use();
 	// Set light position
-	//vec4 lightPos = vec4(-20.0f, 8.0f, -25.0f, 1.0f);
-	//vec4 lightPos = vec4(0.0f, 4.0f, 0.0f, 1.0f);
 	vec4 lightPos2 = vec4(8.0f, 3.0f, 0.0f, 1.0f);
 	vec4 fireLightPos = vec4(0.0f, 1.5f, 4.0f, 1.0f); // Inside barrel
 
@@ -441,9 +447,9 @@ void SceneBasic_Uniform::drawScene() {
 
 
 	// Animte fire light inside barrel
-	float fireIntensity = 1.0f + 0.75f * sin(tPrev * 5.0f); // Flicker 
-	prog.setUniform("Lights[2].L", vec3(0.0f));
-	prog.setUniform("Lights[2].L", vec3(fireIntensity) * 0.35f); // Update fire light intensity
+	//float fireIntensity = 1.0f + 0.75f * sin(tPrev * 5.0f); // Flicker 
+	//prog.setUniform("Lights[2].L", vec3(0.0f));
+	//prog.setUniform("Lights[2].L", vec3(fireIntensity) * 0.35f); // Update fire light intensity
 
 	// Set material properties
 	vec3 diffuseColor = vec3(0.5f, 0.0f, 0.0f);

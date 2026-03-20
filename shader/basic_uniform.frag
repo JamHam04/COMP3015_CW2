@@ -47,6 +47,7 @@ float luminance(vec3 color) {
 
 uniform int NumLights;
 uniform bool useMixTexture;
+uniform bool showShadows;
 
 uniform struct LightInfo {
     vec4 Position;
@@ -129,7 +130,7 @@ vec4 Pass1() {
     for (int i = 0; i < NumLights; i++) {
         float shadow = 1.0;
 
-        if(i == 0) {
+        if(i == 0 && showShadows) {
             if (ShadowCoord.z >= 0) shadow = textureProj(ShadowMap, ShadowCoord);
         }
 

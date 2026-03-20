@@ -277,13 +277,13 @@ void SceneBasic_Uniform::render()
 // Shadow pass
 void SceneBasic_Uniform::shadowPass()
 {
-	// Use a directional light (e.g., sunlight)
-	vec3 lightPos = vec3(0.0f, 4.0f, 10.0f); // Light position
-	vec3 target = vec3(0.0f, 1.3f, 4.0f);    // Look at the barrel
-	vec3 up = vec3(0.0f, 1.0f, 0.0f);
+
+	vec3 lightPos = vec3(0.0f, 20.0f, 0.0f); // Directly above scene center
+	vec3 target = vec3(0.0f, 0.0f, 0.0f);    // Looking straight down at scene center
+	vec3 up = vec3(0.0f, 0.0f, -1.0f);       // Up vector perpendicular to light direction
 
 	shadowFrustum.orient(lightPos, target, up);
-	shadowFrustum.setPerspective(45.0f, 1.0f, 0.1f, 100.0f);
+	shadowFrustum.setPerspective(60.0f, 1.0f, 1.0f, 50.0f);
 
 	mat4 shadowBias = mat4(
 		0.5f, 0.0f, 0.0f, 0.0f,
@@ -294,7 +294,7 @@ void SceneBasic_Uniform::shadowPass()
 	shadowPV = shadowBias * shadowFrustum.getProjectionMatrix() * shadowFrustum.getViewMatrix();
 
 	glBindFramebuffer(GL_FRAMEBUFFER, shadowFBO);
-	glViewport(0, 0, 512, 512);
+	glViewport(0, 0, 2048, 2048);
 	glClear(GL_DEPTH_BUFFER_BIT);
 	view = shadowFrustum.getViewMatrix();
 	projection = shadowFrustum.getProjectionMatrix();
@@ -427,13 +427,13 @@ void SceneBasic_Uniform::drawScene() {
 	//vec4 lightPos = vec4(-20.0f, 8.0f, -25.0f, 1.0f);
 	//vec4 lightPos = vec4(0.0f, 4.0f, 0.0f, 1.0f);
 	vec4 lightPos2 = vec4(8.0f, 3.0f, 0.0f, 1.0f);
-	vec4 fireLightPos = vec4(0.0f, 2.5f, 4.0f, 1.0f); // Inside barrel
+	vec4 fireLightPos = vec4(0.0f, 1.5f, 4.0f, 1.0f); // Inside barrel
 
 
 
 	//prog.setUniform("Lights[0].Position", view * lightPos);
 
-	vec4 lightPos = vec4(0.0f, 4.0f, 10.0f, 1.0f);
+	vec4 lightPos = vec4(0.0f, 20.0f, 0.0f, 1.0f);
 	prog.setUniform("Lights[0].Position", view * lightPos);
 
 	prog.setUniform("Lights[1].Position", view * lightPos2);
@@ -441,9 +441,9 @@ void SceneBasic_Uniform::drawScene() {
 
 
 	// Animte fire light inside barrel
-	//float fireIntensity = 1.0f + 0.75f * sin(tPrev * 5.0f); // Flicker 
-	//prog.setUniform("Lights[2].L", vec3(0.0f));
-	//prog.setUniform("Lights[2].L", vec3(fireIntensity) * 0.35f); // Update fire light intensity
+	float fireIntensity = 1.0f + 0.75f * sin(tPrev * 5.0f); // Flicker 
+	prog.setUniform("Lights[2].L", vec3(0.0f));
+	prog.setUniform("Lights[2].L", vec3(fireIntensity) * 0.35f); // Update fire light intensity
 
 	// Set material properties
 	vec3 diffuseColor = vec3(0.5f, 0.0f, 0.0f);
@@ -454,6 +454,8 @@ void SceneBasic_Uniform::drawScene() {
 	prog.setUniform("Material.Ks", specularColor);
 	prog.setUniform("Material.Ka", ambientColor);
 	prog.setUniform("Material.Shininess", 75.0f);
+
+	prog.setUniform("showShadows", true);
 
 	// FLOOR
 	glActiveTexture(GL_TEXTURE0);
@@ -523,6 +525,8 @@ void SceneBasic_Uniform::drawScene() {
 	model = glm::scale(model, vec3(0.6f, 1.0f, 0.16f));
 	setMatrices();
 	plane.render();
+
+	prog.setUniform("showShadows", false); // Disable shadows for complex objects)
 
 	// ROOF
 	glActiveTexture(GL_TEXTURE0);
@@ -809,7 +813,7 @@ void SceneBasic_Uniform::setupFBO()
 	// Shadow buffer
 	glGenTextures(1, &shadowDepthTex);
 	glBindTexture(GL_TEXTURE_2D, shadowDepthTex);
-	glTexStorage2D(GL_TEXTURE_2D, 1, GL_DEPTH_COMPONENT32F, 512,512);
+	glTexStorage2D(GL_TEXTURE_2D, 1, GL_DEPTH_COMPONENT32F, 2048,2048);
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);

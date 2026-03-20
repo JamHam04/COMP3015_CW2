@@ -15,6 +15,7 @@
 #include "helper/skybox.h"
 
 #include "helper/particleutils.h"
+#include "helper/frustum.h"
 
 class SceneBasic_Uniform : public Scene
 {
@@ -25,7 +26,7 @@ private:
 	GLuint vaoHandle;
 	GLuint hdrFBO, hdrTexture, quad, shadowFBO;
 	GLuint blurFBO, tex1, tex2;
-	GLuint linearSampler, nearestSampler;
+	GLuint linearSampler, nearestSampler, shadowSampler;
 	int bloomBufferWidth, bloomBufferHeight;
 
 	GLSLProgram prog;
@@ -43,6 +44,14 @@ private:
 	int numberOfParticles;
 	float particleLifetime;
 	float particleSize;
+
+	// Shadows
+	Frustum shadowFrustum;
+	glm::mat4 shadowPV;
+	void shadowPass();
+	void debugShadowMap();
+	GLuint shadowDepthTex;
+
 
 	void setMatrices();
 

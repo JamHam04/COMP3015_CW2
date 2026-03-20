@@ -127,15 +127,15 @@ vec4 Pass1() {
 
     // Lighting
     for (int i = 0; i < NumLights; i++) {
-        color += blinnPhong(Lights[i], Position, normalize(finalNormalTex), finalDiffuseTex);
-    }
+        float shadow = 1.0;
 
-    // Shadow Mapping
-    float shadow = 1.0;
-    if (ShadowCoord.z > 0.0) {
-        shadow = textureProj(ShadowMap, ShadowCoord);
+        if(i == 0) {
+            if (ShadowCoord.z >= 0) shadow = textureProj(ShadowMap, ShadowCoord);
+        }
+
+        color += blinnPhong(Lights[i], Position, normalize(finalNormalTex), finalDiffuseTex) * shadow;
     }
-    color *= shadow;
+    // Shadow Mapping
 
     color = mix(Fog.Color, color, fogFactor);
     return vec4(color, 1.0);
@@ -204,7 +204,6 @@ float Gamma = 2.2f;
 
 void main()
 {
-
     if(Pass == 1) FragColor = Pass1();
     else if(Pass == 2) FragColor = Pass2();
     else if(Pass == 3) FragColor = Pass3();

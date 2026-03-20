@@ -43,6 +43,9 @@ void SceneBasic_Uniform::initScene()
 {
 	glEnable(GL_DEPTH_TEST);
 
+	// disable log spam
+	glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DEBUG_SEVERITY_NOTIFICATION, 0, nullptr, GL_FALSE);
+
 	// Camera View
 	cameraLastX = width / 2.0f;
 	cameraLastY = height / 2.0f;
@@ -54,6 +57,8 @@ void SceneBasic_Uniform::initScene()
 	projection = glm::perspective(glm::radians(70.0f), (float)width / height, 0.3f, 100.0f);
 
 	setupFBO();
+	glActiveTexture(GL_TEXTURE5);
+	glBindTexture(GL_TEXTURE_2D, shadowDepthTex);
 
 	// Setup quad 
 	GLfloat verts[] = {
@@ -104,28 +109,38 @@ void SceneBasic_Uniform::initScene()
 		float val = weights[i] / sum;
 		prog.setUniform(uniName.str().c_str(), val);
 	}
-	// Set up two sampler objects for linear and nearest filtering
-	GLuint samplers[2];
-	glGenSamplers(2, samplers);
+	// Set up sampler objects 
+	GLuint samplers[3];
+	glGenSamplers(3, samplers);
 	linearSampler = samplers[0];
 	nearestSampler = samplers[1];
+	shadowSampler = samplers[2];
 	GLfloat border[] = { 0.0f,0.0f,0.0f,0.0f };
-	// Set up the nearest sampler
+	// nearest sampler
 	glSamplerParameteri(nearestSampler, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glSamplerParameteri(nearestSampler, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glSamplerParameteri(nearestSampler, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
 	glSamplerParameteri(nearestSampler, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
 	glSamplerParameterfv(nearestSampler, GL_TEXTURE_BORDER_COLOR, border);
-	// Set up the linear sampler
+	// linear sampler
 	glSamplerParameteri(linearSampler, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glSamplerParameteri(linearSampler, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glSamplerParameteri(linearSampler, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
 	glSamplerParameteri(linearSampler, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
 	glSamplerParameterfv(linearSampler, GL_TEXTURE_BORDER_COLOR, border);
-	// We want nearest sampling except for the last pass.
+
 	glBindSampler(0, nearestSampler);
 	glBindSampler(1, nearestSampler);
 	glBindSampler(2, nearestSampler);
+	glSamplerParameteri(shadowSampler, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glSamplerParameteri(shadowSampler, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glSamplerParameteri(shadowSampler, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+	glSamplerParameteri(shadowSampler, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+	glSamplerParameteri(shadowSampler, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+	glSamplerParameteri(shadowSampler, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
+
+	// Bind shadow
+	glBindSampler(5, shadowSampler);
 
 	// Light properties
 	prog.setUniform("NumLights", 3); // Number of lights
@@ -190,7 +205,8 @@ void SceneBasic_Uniform::initScene()
 	particleProg.setUniform("EmitterPosition", vec3(0.0f, 1.5f, 4.0f)); // Emit from inside barrel
 	particleProg.setUniform("EmitterDirection", ParticleUtils::makeArbitraryBasis(vec3(0.0f, 1.0f, 0.0f))); // Emit upwards
 
-	prog.use();
+	prog.use();	
+
 }
 
 void SceneBasic_Uniform::compile()
@@ -246,23 +262,71 @@ void SceneBasic_Uniform::update(float t, GLFWwindow* window)
 }
 void SceneBasic_Uniform::render()
 {
+	shadowPass();
 	pass1();
 	computeLogAveLuminance();
 	pass2();
 	pass3();
 	pass4();
 	pass5();
+
+	glBindSampler(0, 0);
+	glBindSampler(1, 0);
+}
+
+// Shadow pass
+void SceneBasic_Uniform::shadowPass()
+{
+	// Use a directional light (e.g., sunlight)
+	vec3 lightPos = vec3(0.0f, 4.0f, 10.0f); // Light position
+	vec3 target = vec3(0.0f, 1.3f, 4.0f);    // Look at the barrel
+	vec3 up = vec3(0.0f, 1.0f, 0.0f);
+
+	shadowFrustum.orient(lightPos, target, up);
+	shadowFrustum.setPerspective(45.0f, 1.0f, 0.1f, 100.0f);
+
+	mat4 shadowBias = mat4(
+		0.5f, 0.0f, 0.0f, 0.0f,
+		0.0f, 0.5f, 0.0f, 0.0f,
+		0.0f, 0.0f, 0.5f, 0.0f,
+		0.5f, 0.5f, 0.5f, 1.0f
+	);
+	shadowPV = shadowBias * shadowFrustum.getProjectionMatrix() * shadowFrustum.getViewMatrix();
+
+	glBindFramebuffer(GL_FRAMEBUFFER, shadowFBO);
+	glViewport(0, 0, 512, 512);
+	glClear(GL_DEPTH_BUFFER_BIT);
+	view = shadowFrustum.getViewMatrix();
+	projection = shadowFrustum.getProjectionMatrix();
+
+	glDisable(GL_CULL_FACE);
+	glEnable(GL_POLYGON_OFFSET_FILL);
+	glPolygonOffset(4.0f, 16.0f); 
+	drawScene();    
+	glDisable(GL_POLYGON_OFFSET_FILL);
+	glFlush();
+	
+
+
 }
 
 // HDR
 void SceneBasic_Uniform::pass1()
 {
+	prog.use();
 	prog.setUniform("Pass", 1);
-	glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
+
+	glActiveTexture(GL_TEXTURE5);
+	glBindTexture(GL_TEXTURE_2D, shadowDepthTex);
+	glBindSampler(5, shadowSampler);
+	prog.setUniform("ShadowMap", 5);
+
+
 	glViewport(0, 0, width, height);
 	glBindFramebuffer(GL_FRAMEBUFFER, hdrFBO);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glEnable(GL_DEPTH_TEST);
+	view = glm::lookAt(cameraPos, cameraPos + cameraTarget, cameraUp);
 	projection = glm::perspective(glm::radians(60.0f), (float)width / height, 0.3f, 100.0f);
 
 	drawScene();
@@ -272,12 +336,14 @@ void SceneBasic_Uniform::pass1()
 // Bloom
 void SceneBasic_Uniform::pass2()
 {
+	glDisable(GL_DEPTH_TEST);
+	glDisable(GL_CULL_FACE);
+
 	prog.setUniform("Pass", 2);
 	glBindFramebuffer(GL_FRAMEBUFFER, blurFBO);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex1, 0);
 	glViewport(0, 0, bloomBufferWidth, bloomBufferHeight);
 
-	glDisable(GL_DEPTH_TEST);
 	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
 
@@ -292,11 +358,17 @@ void SceneBasic_Uniform::pass2()
 
 	glBindVertexArray(quad);
 	glDrawArrays(GL_TRIANGLES, 0, 6);
+
+	glEnable(GL_DEPTH_TEST); // ENABLE DEPTH FOR SHADOWS
+	glEnable(GL_CULL_FACE);
 }
 
 // Blur (vertical)
 void SceneBasic_Uniform::pass3()
 {
+	glDisable(GL_DEPTH_TEST);
+	glDisable(GL_CULL_FACE);
+
 	prog.setUniform("Pass", 3);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex2, 0);
 
@@ -308,11 +380,17 @@ void SceneBasic_Uniform::pass3()
 
 	glBindVertexArray(quad);
 	glDrawArrays(GL_TRIANGLES, 0, 6);
+
+	glEnable(GL_DEPTH_TEST); 
+	glEnable(GL_CULL_FACE);
 }
 
 // Blur (horizontal)
 void SceneBasic_Uniform::pass4()
 {
+	glDisable(GL_DEPTH_TEST);
+	glDisable(GL_CULL_FACE);
+
 	prog.setUniform("Pass", 4);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex1, 0);
 
@@ -324,10 +402,12 @@ void SceneBasic_Uniform::pass4()
 
 	glBindVertexArray(quad);
 	glDrawArrays(GL_TRIANGLES, 0, 6);
+
+	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_CULL_FACE);
 }
 
 void SceneBasic_Uniform::drawScene() {
-
 
 	// SKYBOX
 	skyboxProg.use();
@@ -344,12 +424,21 @@ void SceneBasic_Uniform::drawScene() {
 
 	prog.use();
 	// Set light position
-	vec4 lightPos = vec4(-20.0f, 8.0f, -25.0f, 1.0f);
+	//vec4 lightPos = vec4(-20.0f, 8.0f, -25.0f, 1.0f);
+	//vec4 lightPos = vec4(0.0f, 4.0f, 0.0f, 1.0f);
 	vec4 lightPos2 = vec4(8.0f, 3.0f, 0.0f, 1.0f);
-	//vec4 fireLightPos = vec4(0.0f, 2.5f, 4.0f, 1.0f); // Inside barrel
+	vec4 fireLightPos = vec4(0.0f, 2.5f, 4.0f, 1.0f); // Inside barrel
+
+
+
+	//prog.setUniform("Lights[0].Position", view * lightPos);
+
+	vec4 lightPos = vec4(0.0f, 4.0f, 10.0f, 1.0f);
 	prog.setUniform("Lights[0].Position", view * lightPos);
+
 	prog.setUniform("Lights[1].Position", view * lightPos2);
-	//prog.setUniform("Lights[2].Position", view * fireLightPos);
+	prog.setUniform("Lights[2].Position", view * fireLightPos);
+
 
 	// Animte fire light inside barrel
 	//float fireIntensity = 1.0f + 0.75f * sin(tPrev * 5.0f); // Flicker 
@@ -506,13 +595,13 @@ void SceneBasic_Uniform::drawScene() {
 
 	setMatrices();
 	barrel->render();
-	
-
 }
 
 // Combine HDR and bloom + tone mapping
 void SceneBasic_Uniform::pass5()
 {
+	glDisable(GL_DEPTH_TEST);
+	glDisable(GL_CULL_FACE);
 	prog.setUniform("Pass", 5);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
@@ -524,15 +613,18 @@ void SceneBasic_Uniform::pass5()
 	glBindTexture(GL_TEXTURE_2D, hdrTexture);
 
 	// Bind blurred bloom texture to unit 2
-	glActiveTexture(GL_TEXTURE2);
+	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, tex1);   // final blurred result
 
+	glBindSampler(0, linearSampler);
 	glBindSampler(1, linearSampler);
 
 	glBindVertexArray(quad);
 	glDrawArrays(GL_TRIANGLES, 0, 6);
 
 	glBindSampler(1, nearestSampler);
+	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_CULL_FACE);
 }
 
 void SceneBasic_Uniform::drawParticles() {
@@ -565,7 +657,6 @@ void SceneBasic_Uniform::drawParticles() {
 	particleProg.setUniform("ProjectionMatrix", projection);
 	particleProg.setUniform("ModelViewMatrix", view);
 
-
 	glActiveTexture(GL_TEXTURE4);
 	glBindTexture(GL_TEXTURE_2D, particleTexture);
 
@@ -592,7 +683,6 @@ void SceneBasic_Uniform::drawParticles() {
 
 }
 
-
 void SceneBasic_Uniform::resize(int w, int h)
 {
 	width = w;
@@ -606,9 +696,9 @@ void SceneBasic_Uniform::setMatrices()
 	prog.setUniform("ModelViewMatrix", mv);
 	prog.setUniform("NormalMatrix", mat3(vec3(mv[0]), vec3(mv[1]), vec3(mv[2])));
 	prog.setUniform("MVP", projection * mv);
-	mat4 lightView = glm::lookAt(vec3(-20.0f, 8.0f, -25.0f), vec3(0.0f), vec3(0.0f, 1.0f, 0.0f));
-	mat4 lightProjection = glm::ortho(-20.0f, 20.0f, -20.0f, 20.0f, 1.0f, 50.0f);
-	prog.setUniform("LightProjectionMatrix", lightProjection * lightView);
+	prog.setUniform("LightProjectionMatrix", shadowPV * model);
+
+
 
 }
 
@@ -631,10 +721,6 @@ void SceneBasic_Uniform::userInput(GLFWwindow* WindowIn)
 		cameraPos += glm::normalize(glm::cross(cameraTarget, cameraUp)) * cameraSpeed * deltaTime; // Move right
 
 	}
-
-
-
-
 
 	// Handle mouse input for camera rotation
 	float sensitivity = 0.1f;
@@ -676,11 +762,10 @@ void SceneBasic_Uniform::userInput(GLFWwindow* WindowIn)
 // Setup framebuffer
 void SceneBasic_Uniform::setupFBO()
 {
-
 	// Frame buffer
 	glGenFramebuffers(1, &hdrFBO);
 	glBindFramebuffer(GL_FRAMEBUFFER, hdrFBO);
-#
+
 	glActiveTexture(GL_TEXTURE0);
 	glGenTextures(1, &hdrTexture);
 	glBindTexture(GL_TEXTURE_2D, hdrTexture);
@@ -722,10 +807,9 @@ void SceneBasic_Uniform::setupFBO()
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 	// Shadow buffer
-	GLuint shadowDepthTex;
 	glGenTextures(1, &shadowDepthTex);
 	glBindTexture(GL_TEXTURE_2D, shadowDepthTex);
-	glTexStorage2D(GL_TEXTURE_2D, 1, GL_DEPTH_COMPONENT32F, width, height);
+	glTexStorage2D(GL_TEXTURE_2D, 1, GL_DEPTH_COMPONENT32F, 512,512);
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -734,7 +818,7 @@ void SceneBasic_Uniform::setupFBO()
 	GLfloat borderColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
 	glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LESS);
 
 	glGenFramebuffers(1, &shadowFBO);
 	glBindFramebuffer(GL_FRAMEBUFFER, shadowFBO);
@@ -742,7 +826,6 @@ void SceneBasic_Uniform::setupFBO()
 	glDrawBuffer(GL_NONE);
 	glReadBuffer(GL_NONE);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
 
 
 }
@@ -843,4 +926,3 @@ void SceneBasic_Uniform::initParticleBuffers()
 	glBindBufferBase(GL_TRANSFORM_FEEDBACK_BUFFER, 2, age[1]);
 	glBindTransformFeedback(GL_TRANSFORM_FEEDBACK, 0);
 }
-

@@ -18,6 +18,7 @@ uniform mat4 ProjectionMatrix;
 uniform mat4 MVP;
 uniform mat4 LightProjectionMatrix;
 
+
 void main()
 {
 	Normal = normalize(NormalMatrix * VertexNormal);

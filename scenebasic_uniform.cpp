@@ -37,6 +37,9 @@ particleLifetime(4.0f), numberOfParticles(1000), particleSize(0.5f), drawBuffer(
 	barrel = ObjMesh::load("media/model/barrel_stove_4k.obj", true);
 	roof = ObjMesh::load("media/model/Broken_Wall.obj", true);
 	barrier = ObjMesh::load("media/model/concrete_road_barrier_02_4k.obj", true);
+	crowbar = ObjMesh::load("media/model/crowbar_01_4k.obj", true);
+	trashcan = ObjMesh::load("media/model/metal_trash_can_4k.obj", true);
+	chair = ObjMesh::load("media/model/plastic_monobloc_chair_01_4k.obj", true);
 }
 
 void SceneBasic_Uniform::initScene()
@@ -181,6 +184,15 @@ void SceneBasic_Uniform::initScene()
 
 	barrierDiffuseTexture = Texture::loadTexture("media/texture/concrete_road_barrier_02_diff_4k.jpg");
 	barrierNormalTexture = Texture::loadTexture("media/texture/concrete_road_barrier_02_nor_gl_4k.jpg");
+
+	crowbarDiffuseTexture = Texture::loadTexture("media/texture/crowbar_01_diff_4k.jpg");
+	crowbarNormalTexture = Texture::loadTexture("media/texture/crowbar_01_nor_gl_4k.jpg");
+
+	trashcanDiffuseTexture = Texture::loadTexture("media/texture/metal_trash_can_diff_4k.jpg");
+	trashcanNormalTexture = Texture::loadTexture("media/texture/metal_trash_can_nor_gl_4k.jpg");
+
+	chairDiffuseTexture = Texture::loadTexture("media/texture/plastic_monobloc_chair_01_diff_4k.jpg");
+	chairNormalTexture = Texture::loadTexture("media/texture/plastic_monobloc_chair_01_nor_gl_4k.jpg");
 
 	skyboxTexture = Texture::loadHdrCubeMap("media/texture/cube/night/n");
 
@@ -509,9 +521,10 @@ void SceneBasic_Uniform::drawScene() {
 
 	// Front Wall
 	model = mat4(1.0f);
-	model = glm::translate(model, vec3(0.0f, 4.0f, 15.0f));
+	model = glm::translate(model, vec3(0.0f, 4.0f, 13.0f));
 	model = glm::rotate(model, glm::radians(-90.0f), vec3(1, 0, 0));
-	model = glm::scale(model, vec3(0.4f, 1.0f, 0.16f));
+	model = glm::rotate(model, glm::radians(10.0f), vec3(0, 0, 1));
+	model = glm::scale(model, vec3(1.0f, 1.0f, 0.16f));
 	setMatrices();
 	plane.render();
 
@@ -606,6 +619,64 @@ void SceneBasic_Uniform::drawScene() {
 
 	setMatrices();
 	barrel->render();
+
+	// CROWBAR
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, crowbarDiffuseTexture);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, crowbarNormalTexture);
+
+	prog.setUniform("Textures.diffuseTexture", 0);
+	prog.setUniform("Textures.normalTexture", 1);
+
+	model = mat4(1.0f);
+	// Leam against barrel
+	model = glm::translate(model, vec3(1.0f, 1.0f, 4.5f));
+	model = glm::rotate(model, glm::radians(9.0f), vec3(0, 0, 1));
+	model = glm::scale(model, vec3(4.0f));
+	setMatrices();
+	crowbar->render();
+
+	// TRASH CAN
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, trashcanDiffuseTexture);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, trashcanNormalTexture);
+
+	prog.setUniform("Textures.diffuseTexture", 0);
+	prog.setUniform("Textures.normalTexture", 1);
+
+	model = mat4(1.0f);
+	model = glm::translate(model, vec3(-5.0f, 2.0f, 3.0f));
+	model = glm::scale(model, vec3(3.0f));
+	setMatrices();
+	trashcan->render();
+
+	// Floor trashcan
+	model = mat4(1.0f);
+	model = glm::translate(model, vec3(-2.0f, 0.6f, 7.0f));
+	model = glm::scale(model, vec3(3.0f));
+	model = glm::rotate(model, glm::radians(90.0f), vec3(1, 0, 0));
+	model = glm::rotate(model, glm::radians(90.0f), vec3(0, 1, 0));
+	model = glm::rotate(model, glm::radians(60.0f), vec3(1, 0, 0));
+	setMatrices();
+	trashcan->render();
+
+	// CHAIR
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, chairDiffuseTexture);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, chairNormalTexture);
+
+	prog.setUniform("Textures.diffuseTexture", 0);
+	prog.setUniform("Textures.normalTexture", 1);
+
+	model = mat4(1.0f);
+	model = glm::translate(model, vec3(3.0f, 1.0f, 6.0f));
+	model = glm::scale(model, vec3(3.0f));
+	model = glm::rotate(model, glm::radians(-120.0f), vec3(0, 1, 0));
+	setMatrices();
+	chair->render();
 }
 
 // Combine HDR and bloom + tone mapping

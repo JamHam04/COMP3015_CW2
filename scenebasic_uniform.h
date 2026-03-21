@@ -22,7 +22,7 @@ class SceneBasic_Uniform : public Scene
 {
 private:
 	Plane plane;
-	std::unique_ptr<ObjMesh> barrel, roof, barrier;
+	std::unique_ptr<ObjMesh> barrel, roof, barrier, crowbar, trashcan, chair;
 	SkyBox skybox;
 	GLuint vaoHandle;
 	GLuint hdrFBO, hdrTexture, quad, shadowFBO;
@@ -82,6 +82,15 @@ private:
 
 	GLuint barrierDiffuseTexture;
 	GLuint barrierNormalTexture;
+
+	GLuint crowbarDiffuseTexture;
+	GLuint crowbarNormalTexture;
+
+	GLuint trashcanDiffuseTexture;
+	GLuint trashcanNormalTexture;
+
+	GLuint chairDiffuseTexture;
+	GLuint chairNormalTexture;
 
 	GLuint skyboxTexture;
 	GLuint noiseTexture;

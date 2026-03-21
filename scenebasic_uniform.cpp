@@ -148,6 +148,7 @@ void SceneBasic_Uniform::initScene()
 	prog.setUniform("Lights[0].L", vec3(0.35f, 0.38f, 0.45f)); // Light intensity
 	prog.setUniform("Lights[0].La", vec3(0.05f)); // Ambient light intensity
 	prog.setUniform("Lights[0].Ld", vec3(0.5f)); // Diffuse light intensity
+	prog.setUniform("Lights[0].Ld", vec3(0.5f)); // Diffuse light intensity
 
 	prog.setUniform("Lights[1].L", vec3(0.12f, 0.12f, 0.13f)); // Light intensity
 	prog.setUniform("Lights[1].La", vec3(0.03f)); // Ambient light intensity
@@ -185,9 +186,7 @@ void SceneBasic_Uniform::initScene()
 
 
 	// Particle buffers
-	
 	particleTexture = Texture::loadTexture("media/texture/fire.png");
-
 
 	glActiveTexture(GL_TEXTURE1);
 	ParticleUtils::createRandomTex1D(numberOfParticles * 3);
@@ -208,8 +207,11 @@ void SceneBasic_Uniform::initScene()
 	prog.use();	
 
 	// Noise
-	noiseTexture = NoiseTex::generate2DTex(3.0f);
 
+	noiseTexture = NoiseTex::generate2DTex(5.0f);
+	glBindTexture(GL_TEXTURE_2D, noiseTexture);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
 
 }
 
@@ -245,8 +247,6 @@ void SceneBasic_Uniform::update(float t, GLFWwindow* window)
 {
 	// Time
 	deltaTime = t - tPrev;
-
-
 
 	if (tPrev == 0.0f) {
 		deltaTime = 0.0f;
@@ -310,8 +310,6 @@ void SceneBasic_Uniform::shadowPass()
 	glDisable(GL_POLYGON_OFFSET_FILL);
 	glFlush();
 	
-
-
 }
 
 // HDR
@@ -427,6 +425,9 @@ void SceneBasic_Uniform::drawScene() {
 	skyboxProg.setUniform("NoiseTexture", 1);
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, noiseTexture);
+
+
+	skyboxProg.setUniform("Time", tPrev);
 
 	skybox.render();
 

@@ -27,8 +27,6 @@ in vec4 ShadowCoord;
 
 layout (location = 0) out vec4 FragColor;
 
-
-
 uniform mat3 rgb2xyz = mat3(
     0.4124564, 0.2126729, 0.0193339,
     0.3572769, 0.7151522, 0.1191920,

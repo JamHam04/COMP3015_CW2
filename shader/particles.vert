@@ -39,8 +39,8 @@ const vec2 texCoords[] = vec2[](vec2(0, 0), vec2(1, 0), vec2(1, 1),
 );
 
 vec3 randomStartingVelocity() {
-    float velocity = mix(0.05, 0.2, texelFetch(RandomTexture, 2 * gl_VertexID, 0).r);
-    return EmitterDirection * vec3(0, velocity, 0);
+    float velocity = mix(0.05, 0.2, texelFetch(RandomTexture, 2 * gl_VertexID, 0).r); // Random velocity between 0.05 and 0.2
+    return EmitterDirection * vec3(0, velocity, 0); // Float upwards
 }
 
 vec3 randomStartingPosition() {
@@ -80,7 +80,7 @@ void render() {
         // Shrink particles over time
         float particleLife = VertexAge / ParticleLifetime;
         float particleSize = mix(ParticleStartSize, 0.0, particleLife * 0.7);
-        // Face particles towards the camera
+        // Set particle positions 
         cameraPosition = (ModelViewMatrix * vec4(VertexPosition, 1.0)).xyz + offsets[gl_VertexID] * particleSize;
 
         // Fade out particles over time randomly

@@ -105,7 +105,7 @@ void SceneBasic_Uniform::initScene()
 		weights[i] = gauss(float(i), sigma2);
 		sum += 2 * weights[i];
 	}
-	// Normalize the weights and set the uniform
+	// Normalize weights and set uniform
 	for (int i = 0; i < 10; i++) {
 		std::stringstream uniName;
 		uniName << "Weight[" << i << "]";
@@ -219,7 +219,6 @@ void SceneBasic_Uniform::initScene()
 	prog.use();	
 
 	// Noise
-
 	noiseTexture = NoiseTex::generate2DTex(5.0f);
 	glBindTexture(GL_TEXTURE_2D, noiseTexture);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
@@ -279,6 +278,7 @@ void SceneBasic_Uniform::update(float t, GLFWwindow* window)
 void SceneBasic_Uniform::render()
 {
 	shadowPass();
+	
 	pass1();
 	computeLogAveLuminance();
 	pass2();
@@ -286,6 +286,7 @@ void SceneBasic_Uniform::render()
 	pass4();
 	pass5();
 
+	// Unbind samplers
 	glBindSampler(0, 0);
 	glBindSampler(1, 0);
 }
@@ -293,14 +294,15 @@ void SceneBasic_Uniform::render()
 // Shadow pass
 void SceneBasic_Uniform::shadowPass()
 {
-
-	vec3 lightPos = vec3(0.0f, 20.0f, 0.0f); // Directly above scene center
-	vec3 target = vec3(0.0f, 0.0f, 0.0f);    // Looking straight down at scene center
-	vec3 up = vec3(0.0f, 0.0f, -1.0f);       // Up vector perpendicular to light direction
+	// Shadow map setup
+	vec3 lightPos = vec3(0.0f, 20.0f, 0.0f); 
+	vec3 target = vec3(0.0f, 0.0f, 0.0f);    
+	vec3 up = vec3(0.0f, 0.0f, -1.0f); 
 
 	shadowFrustum.orient(lightPos, target, up);
 	shadowFrustum.setPerspective(60.0f, 1.0f, 1.0f, 50.0f);
 
+	// Shadow bias matrix
 	mat4 shadowBias = mat4(
 		0.5f, 0.0f, 0.0f, 0.0f,
 		0.0f, 0.5f, 0.0f, 0.0f,
@@ -315,6 +317,7 @@ void SceneBasic_Uniform::shadowPass()
 	view = shadowFrustum.getViewMatrix();
 	projection = shadowFrustum.getProjectionMatrix();
 
+	// Render shadow caster
 	glDisable(GL_CULL_FACE);
 	glEnable(GL_POLYGON_OFFSET_FILL);
 	glPolygonOffset(4.0f, 16.0f); 
@@ -334,8 +337,6 @@ void SceneBasic_Uniform::pass1()
 	glBindTexture(GL_TEXTURE_2D, shadowDepthTex);
 	glBindSampler(5, shadowSampler);
 	prog.setUniform("ShadowMap", 5);
-
-
 	glViewport(0, 0, width, height);
 	glBindFramebuffer(GL_FRAMEBUFFER, hdrFBO);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -438,7 +439,6 @@ void SceneBasic_Uniform::drawScene() {
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, noiseTexture);
 
-
 	skyboxProg.setUniform("Time", tPrev);
 
 	skybox.render();
@@ -447,8 +447,6 @@ void SceneBasic_Uniform::drawScene() {
 	// Set light position
 	vec4 lightPos2 = vec4(8.0f, 3.0f, 0.0f, 1.0f);
 	vec4 fireLightPos = vec4(0.0f, 1.5f, 4.0f, 1.0f); // Inside barrel
-
-
 
 	//prog.setUniform("Lights[0].Position", view * lightPos);
 
@@ -513,7 +511,7 @@ void SceneBasic_Uniform::drawScene() {
 
 	// Back Wall
 	model = mat4(1.0f);
-	model = glm::translate(model, vec3(0.0f, 4.0f, -15.0f));
+	model = glm::translate(model, vec3(0.0f, 4.0f, -5.0f));
 	model = glm::rotate(model, glm::radians(90.0f), vec3(1, 0, 0));
 	model = glm::scale(model, vec3(0.4f, 1.0f, 0.16f));
 	setMatrices();
@@ -557,11 +555,11 @@ void SceneBasic_Uniform::drawScene() {
 	prog.setUniform("Textures.diffuseTexture", 0);
 	prog.setUniform("Textures.normalTexture", 1);
 
-
 	model = mat4(1.0f);
-	model = glm::translate(model, vec3(6.0f, 8.0f, 0.0f));
+	model = glm::translate(model, vec3(3.0f, 8.0f, 0.0f));
 	model = glm::rotate(model, glm::radians(83.0f), vec3(1, 0, 0));
 	model = glm::rotate(model, glm::radians(3.0f), vec3(0, 1, 0));
+	model = glm::rotate(model, glm::radians(-20.0f), vec3(0, 0, 1)); 
 	model = glm::scale(model, vec3(0.6f, 1.0f, 0.3f));
 	setMatrices();
 	roof->render();
@@ -583,7 +581,7 @@ void SceneBasic_Uniform::drawScene() {
 	model = glm::rotate(model, glm::radians(90.0f), vec3(0, 1, 0));
 	model = glm::rotate(model, glm::radians(83.0f), vec3(1, 0, 0)); // vertical flip
 	model = glm::rotate(model, glm::radians(3.0f), vec3(0, 1, 0));  // mirror tilt
-
+	model = glm::rotate(model, glm::radians(40.0f), vec3(0, 0, 1));
 	model = glm::scale(model, vec3(0.6f, 1.0f, 0.3f));
 	setMatrices();
 	roof->render();
@@ -647,7 +645,7 @@ void SceneBasic_Uniform::drawScene() {
 	prog.setUniform("Textures.normalTexture", 1);
 
 	model = mat4(1.0f);
-	model = glm::translate(model, vec3(-5.0f, 2.0f, 3.0f));
+	model = glm::translate(model, vec3(-4.0f, 1.3f, 2.0f));
 	model = glm::scale(model, vec3(3.0f));
 	setMatrices();
 	trashcan->render();
@@ -838,6 +836,11 @@ void SceneBasic_Uniform::userInput(GLFWwindow* WindowIn)
 	front.z = sin(glm::radians(cameraYaw)) * cos(glm::radians(cameraPitch));
 	cameraTarget = glm::normalize(front);
 
+	// Limit camera to stay within the building
+	cameraPos.x = glm::clamp(cameraPos.x, -9.0f, 9.0f);
+	cameraPos.y = glm::clamp(cameraPos.y, 0.5f, 7.0f);
+	cameraPos.z = glm::clamp(cameraPos.z, -4.0f, 11.0f);
+
 	view = glm::lookAt(cameraPos, cameraPos + cameraTarget, cameraUp);
 }
 
@@ -968,8 +971,6 @@ void SceneBasic_Uniform::initParticleBuffers()
 	glBufferSubData(GL_ARRAY_BUFFER, 0, numberOfParticles * sizeof(float), tempData.data());
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-
-
 	// Particle array 0 
 	glGenVertexArrays(2, particleArray);
 	glBindVertexArray(particleArray[0]);
@@ -996,7 +997,6 @@ void SceneBasic_Uniform::initParticleBuffers()
 	glEnableVertexAttribArray(2);
 
 	glBindVertexArray(0);
-
 	glGenTransformFeedbacks(2, feedback);
 	glBindTransformFeedback(GL_TRANSFORM_FEEDBACK, feedback[0]);
 	glBindBufferBase(GL_TRANSFORM_FEEDBACK_BUFFER, 0, posBuffer[0]);

@@ -10,14 +10,12 @@ out vec3 Normal;
 out vec2 TexCoord;
 out vec4 ShadowCoord;
 
-
 // Uniforms
 uniform mat4 ModelViewMatrix;
 uniform mat3 NormalMatrix;
 uniform mat4 ProjectionMatrix;
 uniform mat4 MVP;
 uniform mat4 LightProjectionMatrix;
-
 
 void main()
 {
